@@ -6,6 +6,7 @@ from time import sleep, time
 
 import aiohttp
 import async_timeout
+import nest_asyncio
 import requests
 from lxml import html
 
@@ -24,7 +25,7 @@ async def _fetch(session, symbol, them, now, resolution='1'):
 
 async def _get_quotes(symbols, them, now, resolution='1'):
     """Fetch stock data for all symbols"""
-    conn = aiohttp.TCPConnector(verify_ssl=False)
+    conn = aiohttp.TCPConnector(ssl=False)
     async with aiohttp.ClientSession(connector=conn, trust_env=True) as session:
         tasks = [_fetch(session, symbol, them, now, resolution) for symbol in symbols]
         responses = await asyncio.gather(*tasks)
@@ -37,6 +38,8 @@ def get_quotes(symbols, them=None, now=None, resolution='1'):
         now = round(time())
     if them is None:
         them = now - 24 * 3600
+    # TODO: Understand why this is necessary
+    nest_asyncio.apply()
     loop = asyncio.get_event_loop()
     quotes = loop.run_until_complete(_get_quotes(symbols, them, now, resolution))
     return quotes
