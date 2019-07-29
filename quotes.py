@@ -7,10 +7,12 @@ from time import sleep, time
 import aiohttp
 import async_timeout
 import nest_asyncio
+import pandas as pd
 import requests
 from lxml import html
 
-QUOTES_DATA_URL=os.getenv('QUOTES_DATA_URL')
+QUOTES_DATA_URL = os.getenv('QUOTES_DATA_URL')
+
 
 async def _fetch(session, symbol, them, now, resolution='1'):
     """Fetch stock data for one sumbol"""
@@ -57,6 +59,19 @@ def get_quotes_hours(symbols, hours=12, resolution='1'):
     now = round(time())
     them = now - 3600 * hours
     return get_quotes(symbols, them, now, resolution)
+
+
+def ohlc(quotes, period='5min'):
+    df = pd.DataFrame(quotes)
+    df = df.loc[:, ('t', 'o', 'h', 'l', 'c', 'v')]
+    df['t'] = pd.to_datetime(df['t'], unit='s')
+    df.set_index('t', inplace=True)
+    df = df.resample(period).agg({'o': 'first', 'h': 'max', 'l': 'min', 'c': 'last', 'v': 'sum'})
+    df.dropna(inplace=True)
+    # Discard after market candles
+    df = df.between_time("10:00", "16:50")
+    df['s'] = abs(df['c'] - df['o'])
+    return df
 
 
 def get_symbols(indice='IBOV'):
