@@ -17,7 +17,7 @@ SLACK_TOKEN = os.getenv('SLACK_TOKEN')
 def elephants(quotes, period='5min', times=1.5):
     """Detect elephant candles"""
     elephant = []
-    out = '<https://br.tradingview.com/chart/?symbol={}|`{:<7}`> `{:5.2f}`\n'
+    out = '<https://br.tradingview.com/chart/?symbol={}|`{:<7}`> `R$ {:5.2f} {:5.2f}x`\n'
     msg = ''
     for row in quotes:
         # get stock symbol
@@ -34,10 +34,13 @@ def elephants(quotes, period='5min', times=1.5):
         df.dropna(inplace=True)
         df['size'] = abs(df['c'] - df['o'])
         tail = list(df['size'][-6:])
+        # previous max
+        pmax = max(tail[:-1])
+        rate = tail[-1] / pmax
 
-        if tail[-1] > times*max(tail[:-1]):
+        if rate > times:
             elephant.append(stock)
-            msg += out.format(stock, stock, df['c'][-1])
+            msg += out.format(stock, stock, df['c'][-1], rate)
 
     if elephant:
         return {'Elephants': elephant, 'msg': msg}
